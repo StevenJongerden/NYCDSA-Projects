@@ -1,5 +1,10 @@
-library(shiny)
-library(shinythemes)
+#################################################################################################################################
+#Shiny App for Descriptive Statistics and Exploratory Analysis on USA Flights of the period April 2017.                         #
+# Version 1,0                                                                                                                   #
+# Author: S. Jongerden                                                                                                          #
+# Data Set is publicly available on: https://www.transtats.bts.gov/DL_SelectFields.asp?Table_ID=236&DB_Short_Name=On-Time       #
+#################################################################################################################################
+
 shinyUI(fluidPage(theme = shinythemes::shinytheme("flatly"),
                   navbarPage(
                     title = 'USA Airline Performance', 
@@ -7,7 +12,7 @@ shinyUI(fluidPage(theme = shinythemes::shinytheme("flatly"),
                              titlePanel("Performance of Airlines in the USA"),
                              sidebarLayout(
                                sidebarPanel(
-                                 helpText("This application provides insights into the performance of several USA airlines in the United States in the year 2008"),
+                                 helpText("This application provides insights into the performance of several USA airlines in the United States in the period April 2017"),
                                  selectInput("Airline",
                                              label = "Choose the Airline",
                                              choices = c("American Airlines",
@@ -21,7 +26,7 @@ shinyUI(fluidPage(theme = shinythemes::shinytheme("flatly"),
                                                          "Hawaiian Airlines",
                                                          "Atlantic Southeast Airlines",
                                                          "Spirit Airlines"),
-                                                         selected = "Delta Air Lines"),
+                                             selected = "Delta Air Lines"),
                                  sliderInput("TopRange", "Select the top flights", min = 1, max = 10, value = 5),
                                  checkboxInput("MapLabels", "Number of flights lables", value=FALSE)),
                                mainPanel(
@@ -72,7 +77,7 @@ shinyUI(fluidPage(theme = shinythemes::shinytheme("flatly"),
                                  selectInput('Destination', 'City of Destination', ""),
                                  br(),
                                  helpText(h4("Average Flight Durations")),
-                                 tableOutput("table")
+                                 div(tableOutput("table"), style = "font-size:80%")
                                ),
                                mainPanel(
                                  fluidRow(
