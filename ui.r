@@ -76,7 +76,7 @@ shinyUI(fluidPage(theme = shinythemes::shinytheme("flatly"),
                                  selectInput('DepartureDestination', 'City of Origin', ""),
                                  selectInput('Destination', 'City of Destination', ""),
                                  br(),
-                                 helpText(h4("Average Flight Durations")),
+                                 helpText(h4("Average Flight Durations (min)")),
                                  div(tableOutput("table"), style = "font-size:80%")
                                ),
                                mainPanel(

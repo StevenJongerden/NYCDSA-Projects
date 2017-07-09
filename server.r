@@ -6,13 +6,11 @@
 #################################################################################################################################
 
 #Installing required packages if required
-#install.packages("devtools")
 #install.packages("ggmap")
 #install.packages("ggrepel")
 #install.packages("readr")
 #install.packages("ggthemes")
 #install.packages("shiny")
-#install.packages("shinydashboard")
 #install.packages("dplyr")
 #install.packages("ggplot2")
 
@@ -31,15 +29,6 @@ DelayedFlights <- read_csv("On_Time_On_Time_PerformanceFinal.csv")
 #Start of Server Script
 shinyServer(function(input, output, session) {
   
-  #Start of Progress Bar Loader    
-  withProgress(message = 'Loading Application', style = "notification", value = 0.1, {
-    incProgress(1/15)
-    Sys.sleep(0.1)  
-    
-    #Progress Bar Update        
-    incProgress(3/15)
-    withProgress(message = 'Creating Map Data', style = "notification", value = NULL, {Sys.sleep(1)})
-    
     #Prepare Data for Map Plot by allocating coordinates from goecordata file for lonitude and latitude coordinations. 
     #This part of code will first create a cross table between origins and destinations for a specific airline.
     #Based on that table it will create a ranked list of the top destinations and join the coordinates to this list
@@ -69,10 +58,6 @@ shinyServer(function(input, output, session) {
                         min = 1, max = val, step = 1)
     })
     
-    #Progress Bar Update    
-    incProgress(1/15)
-    withProgress(message = 'Plotting Map Data', style = "notification", value = NULL, {Sys.sleep(1)})
-    
     #World map plot
     #THe following code creates the plot of the world map. It contains an if statement to control the number of flight labels in the plot.
     output$worldplot <- renderPlot({ggplot() + borders("usa", colour="#efede1", fill="#efede1") + 
@@ -92,11 +77,6 @@ shinyServer(function(input, output, session) {
               axis.title.y = element_blank(),
               legend.position="none")})
     
-    #Progress Bar Update  
-    incProgress(1/15)
-    withProgress(message = 'Plotting Pie Charts', style = "notification", value = NULL, {Sys.sleep(1)})
-    
-    
     #PieChart Number of Flights
     #The following parts of code creates the data for the piecharts on the first page.
     FlightPercentage <- reactive({data.frame(Airline = c(input$Airline, "Other"),
@@ -115,8 +95,8 @@ shinyServer(function(input, output, session) {
     
     
     FlightDelayed <- reactive({data.frame(Delay = c("Delayed", "Not Delayed"),
-                                          Percentage = c(nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline & DelayedFlights$Total_Delay>0,])/nrow(DelayedFlights),
-                                                         1-(nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline & DelayedFlights$Total_Delay>0,])/nrow(DelayedFlights))))})
+                                          Percentage = c(nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline & DelayedFlights$Total_Delay>0,])/nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline,]),
+                                                         1-(nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline & DelayedFlights$Total_Delay>0,])/nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline,]))))})
     
     
     
@@ -137,6 +117,7 @@ shinyServer(function(input, output, session) {
                                                                               nrow(subset(DelayedFlights, UniqueCarrier==input$Airline & NASDelay>0))/nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline,]),
                                                                               nrow(subset(DelayedFlights, UniqueCarrier==input$Airline & SecurityDelay>0))/nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline,]),
                                                                               nrow(subset(DelayedFlights, UniqueCarrier==input$Airline & LateAircraftDelay>0))/nrow(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline,])))
+    #Correct percentages to weight with the overall number. 
     sumperc <- sum(FlightDelayed$Percentage)
     for (i in 1:5){
       FlightDelayed[i,2]<- FlightDelayed[i,2]/sumperc
@@ -154,15 +135,11 @@ shinyServer(function(input, output, session) {
               axis.title.x = element_blank(),
               axis.title.y = element_blank(),legend.position="none", plot.title = element_text(hjust = 0.5))+ggtitle("Percentage of Delays per Type")})
     
-    #Progress Bar Update         
-    incProgress(1/15)
-    withProgress(message = 'Calculating Performance', style = "notification", value = NULL, {Sys.sleep(2)})
-    
     #Prepare Data for Performance
     # THe following code creates the information about the airline that is presented in the three blue boxes on the first page,
     NumberAirplane <- reactive({nrow(unique(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline, 12]))})
     NumberFlights <- reactive({nrow(unique(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline, 11]))})
-    NumberDestinations <- reactive({nrow(unique(DelayedFlights[DelayedFlights$UniqueCarrier==input$Airline, 19]))})
+    NumberDestinations <- reactive({nrow(FlightData())})
     
     output$AirplaneNumbertext <- renderText(paste("Number of airplane operated by:", input$Airline))
     output$FlightsNumbertext <- renderText(paste("Number of routes operated by:", input$Airline))
@@ -171,14 +148,11 @@ shinyServer(function(input, output, session) {
     output$FlightsNumberX <- renderText(NumberFlights())
     output$DestinationsX <- renderText(NumberDestinations())
     
-    #Progress Bar Update      
-    incProgress(2/15)
-    withProgress(message = 'Plotting Delay Data', style = "notification", value = NULL, {Sys.sleep(1)})
-    
     #Delay Distribution Plot
     output$DelayTypePlot <- renderPlot({
       ggplot(data=DelayDataPlot(), aes(x = Month, y = Duration/60, fill=Type))+ geom_bar(stat = "Identity", position = "Stack") + ylab("Delay in hours") + 
-        scale_x_discrete(limits=c("Month")) + scale_fill_manual("legend", values = c("Carrier Delay" = "#dc6900", "NAS Delay" = "#e0301e", "Security Delay" = "#a32020", "Weather Delay" = "#602320", "Late Aircraft Delay"= "#eb8c00"))
+        scale_x_discrete(limits=c("Month")) + 
+        scale_fill_manual("legend", values = c("Carrier Delay" = "#dc6900", "NAS Delay" = "#e0301e", "Security Delay" = "#a32020", "Weather Delay" = "#602320", "Late Aircraft Delay"= "#eb8c00"))
     })
     
     #Select Data for Reactive Dropdown
@@ -231,11 +205,17 @@ shinyServer(function(input, output, session) {
       AirFlightDataComp
     })
     
-    output$DurationPlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= Duration)) + geom_density(aes(fill=UniqueCarrier),alpha = 0.2)+ scale_fill_brewer(name = "Airlines", palette="Blues")})
-    output$TaxiInPlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= TaxiIn))+ geom_density(aes(fill=UniqueCarrier),alpha = 0.2)+ theme(legend.position = "none")+scale_fill_brewer(name = "Airlines", palette="Blues")})
-    output$AirTimePlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= AirTime))+ geom_density(aes(fill=UniqueCarrier),alpha = 0.2)+ theme(legend.position = "none")+scale_fill_brewer(name = "Airlines", palette="Blues")})
-    output$TaxiOutPlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= TaxiOut))+ geom_density(aes(fill=UniqueCarrier),alpha = 0.2)+ theme(legend.position = "none")+scale_fill_brewer(name = "Airlines", palette="Blues")})
+    output$DurationPlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= Duration)) + geom_density(aes(fill=UniqueCarrier),alpha = 0.2) + 
+        theme(panel.background = element_rect(fill="white")) + scale_fill_brewer(name = "Airlines", palette="Blues") + xlab("Duration (min)")})
     
+    output$TaxiInPlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= TaxiIn))+ geom_density(aes(fill=UniqueCarrier),alpha = 0.2) + 
+        theme(legend.position = "none", panel.background = element_rect(fill="white")) + scale_fill_brewer(name = "Airlines", palette="Blues") + xlab("Duration (min)")})
+    
+    output$AirTimePlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= AirTime))+ geom_density(aes(fill=UniqueCarrier),alpha = 0.2) + 
+        theme(legend.position = "none", panel.background = element_rect(fill="white")) + scale_fill_brewer(name = "Airlines", palette="Blues") + xlab("Duration (min)")})
+    
+    output$TaxiOutPlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= TaxiOut)) + geom_density(aes(fill=UniqueCarrier),alpha = 0.2)+ 
+        theme(legend.position = "none", panel.background = element_rect(fill="white")) + scale_fill_brewer(name = "Airlines", palette="Blues") + xlab("Duration (min)")})
     
     #Airport Selection List third tab
     #The following script creates information for the dropdown so that the destinations match with the information that is in the dataset. 
@@ -273,23 +253,18 @@ shinyServer(function(input, output, session) {
     
     #Arrival and Departure Plots
     output$ArrivalIntervalPlot <- renderPlot({ggplot(data=ArrivalInterval(), aes(x= ArrTime))+geom_histogram(aes(fill=UniqueCarrier),position="stack", bins=48)+ggtitle("Arrival Distribution")+
-        xlab("Hour")+scale_fill_brewer(palette="Blues")+xlim(c(0,2400)) + theme(legend.position = "none")})               
+        xlab("Hour")+scale_fill_brewer(palette="Blues")+xlim(c(input$timeslider[1],input$timeslider[2])) + theme(legend.position = "none")+ ylab("Number of flights arriving")})               
     output$DepartureIntervalPlot <- renderPlot({ggplot(data=DepartureInterval(), aes(x= DepTime))+geom_histogram(aes(fill=UniqueCarrier),position="stack", bins=48)+ggtitle("Departure Distribution")+
-        xlab("Hour")+scale_fill_brewer(palette="Blues")+xlim(c(0,2400)) + theme(legend.position = "none")})    
+        xlab("Hour")+scale_fill_brewer(palette="Blues")+xlim(c(input$timeslider[1],input$timeslider[2])) + theme(legend.position = "none")+ylab("Number of flights departing")})    
     
     #DelayedFlights Data 
     DelayedFlightsData <- reactive({
-      DelayedFlightsDataSet <- subset(DelayedFlights, Origin==input$AirportSelection & DelayBoolean=="Delayed")
+      DelayedFlightsDataSet <- subset(DelayedFlights, Origin==input$AirportSelection & DelayBoolean=="Delayed" & ArrTime >=input$timeslider[1] & ArrTime<=input$timeslider[2])
     })
     
     #DelayedFlights Plot
     output$DelayedFlightsPlot <- renderPlot({ggplot(data=DelayedFlightsData(), aes(x=DepTime))+geom_histogram(aes(fill=UniqueCarrier),position="stack", bins=48)+ggtitle("Delay Fequency")+
-        scale_fill_brewer(palette="Blues")+xlab("Hours")+ylab("Number of Delays")})
-    
-    #Progress Bar Update       
-    setProgress(1)
-    withProgress(message = "Finished Loading App, Data will be presented soon", style = "notification", value = NULL, {Sys.sleep(2)})
-  })
+        scale_fill_brewer(palette="Blues")+xlab("Hours")+ylab("Number of Delays")+xlim(c(input$timeslider[1],input$timeslider[2]))})
   
   #End of shiny script. 
   
