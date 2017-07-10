@@ -27,8 +27,11 @@ shinyUI(fluidPage(theme = shinythemes::shinytheme("flatly"),
                                                          "Atlantic Southeast Airlines",
                                                          "Spirit Airlines"),
                                              selected = "Delta Air Lines"),
-                                 sliderInput("TopRange", "Select the top flights", min = 1, max = 10, value = 5),
-                                 checkboxInput("MapLabels", "Number of flights lables", value=FALSE)),
+                                
+                                 selectInput("MapChange", "Routes or Flights Overlay", choices = c("Flights", "Routes")),
+                                 conditionalPanel("input.MapChange == 'Routes'",
+                                                  sliderInput("TopRange", "Select the top flights", min = 1, max = 10, value = 5),
+                                                  checkboxInput("MapLabels", "Number of flights lables", value=FALSE))),
                                mainPanel(
                                  fluidRow(
                                    column(3, style = "background-color:#2c3e50;", style = "color:white",
@@ -49,7 +52,10 @@ shinyUI(fluidPage(theme = shinythemes::shinytheme("flatly"),
                                    br(),
                                    br(),
                                    br(),
-                                   plotOutput("worldplot")
+                                   conditionalPanel("input.MapChange == 'Flights'",
+                                   plotOutput("worldplot2")),
+                                   conditionalPanel("input.MapChange == 'Routes'",
+                                   plotOutput("worldplot"))
                                  ),
                                  fluidRow(column(12, align="center",
                                                  column(1, NULL),

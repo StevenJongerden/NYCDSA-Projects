@@ -22,9 +22,10 @@ library(dplyr)
 library(ggmap)
 library(ggrepel)
 library(ggthemes)
+library(fiftystater)
 
 #Load Data Set and preparing airline names (The data set has been prepared)       
-DelayedFlights <- read_csv("On_Time_On_Time_PerformanceFinal.csv")
+DelayedFlights <- fread("On_Time_On_Time_PerformanceFinal.csv", header = TRUE)
 
 #Start of Server Script
 shinyServer(function(input, output, session) {
@@ -76,6 +77,17 @@ shinyServer(function(input, output, session) {
               axis.title.x = element_blank(),
               axis.title.y = element_blank(),
               legend.position="none")})
+    
+    
+    DataTableDeparting <- reactive({ Departing <-data.frame(filter(DelayedFlights, UniqueCarrier==input$Airline) %>%  group_by(OriginStateName) %>%  
+                                      summarise(NumFlights = sum(Flights)) %>% arrange(OriginStateName) %>%  mutate(OriginStateName = tolower(OriginStateName)))
+                                      })
+
+    
+    output$worldplot2 <- renderPlot({ggplot() + geom_map(data=map_data("state"), map=map_data("state"),aes(long, lat, map_id=region), color="#2b2b2b", fill=NA) + 
+        geom_map(data=DataTableDeparting(), map=map_data("state"), aes(fill=NumFlights, map_id=OriginStateName), color="white", size=0.15) + 
+          theme_map() +  theme(plot.margin=margin(20,20,20,20), legend.position=c(0.9, 0.2), panel.background = element_blank(), panel.border = element_blank()) + coord_fixed(ratio = 1.3/1)})
+  
     
     #PieChart Number of Flights
     #The following parts of code creates the data for the piecharts on the first page.
