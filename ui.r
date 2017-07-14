@@ -83,9 +83,13 @@ shinyUI(fluidPage(theme = shinythemes::shinytheme("flatly"),
                                  selectInput('Destination', 'City of Destination', ""),
                                  br(),
                                  helpText(h4("Average Flight Durations (min)")),
-                                 div(tableOutput("table"), style = "font-size:80%")
+                                 div(tableOutput("table"), style = "font-size:80%"),
+                                 div(tableOutput("tabledif"), style = "font-size:80%")
                                ),
-                               mainPanel(
+                               mainPanel(tags$style(type="text/css",
+                                                    ".shiny-output-error { visibility: hidden; }",
+                                                    ".shiny-output-error:before { visibility: hidden; }"
+                               ),
                                  fluidRow(
                                    column(12,
                                           helpText(h4("Flight Duration per Airline")),

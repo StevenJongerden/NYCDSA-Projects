@@ -13,6 +13,7 @@
 #install.packages("shiny")
 #install.packages("dplyr")
 #install.packages("ggplot2")
+#install.packages("shinythemes")
 
 #Loading packages for script
 library(shiny)
@@ -22,10 +23,14 @@ library(dplyr)
 library(ggmap)
 library(ggrepel)
 library(ggthemes)
+library(shinythemes)
 library(fiftystater)
 
+#Record StartingTime
+startTime <-Sys.time()
+
 #Load Data Set and preparing airline names (The data set has been prepared)       
-DelayedFlights <- fread("On_Time_On_Time_PerformanceFinal.csv", header = TRUE)
+DelayedFlights <- read_csv("On_Time_On_Time_PerformanceFinal2.csv")
 
 #Start of Server Script
 shinyServer(function(input, output, session) {
@@ -79,8 +84,10 @@ shinyServer(function(input, output, session) {
               legend.position="none")})
     
     
+    #World plot 2
+    #Creates an overview of the number of flights per state.
     DataTableDeparting <- reactive({ Departing <-data.frame(filter(DelayedFlights, UniqueCarrier==input$Airline) %>%  group_by(OriginStateName) %>%  
-                                      summarise(NumFlights = sum(Flights)) %>% arrange(OriginStateName) %>%  mutate(OriginStateName = tolower(OriginStateName)))
+                                      summarise(NumFlights = sum(FlightNum)) %>% arrange(OriginStateName) %>%  mutate(OriginStateName = tolower(OriginStateName)))
                                       })
 
     
@@ -101,6 +108,8 @@ shinyServer(function(input, output, session) {
         theme(panel.background = element_blank(),
               panel.border = element_blank(),
               axis.line = element_blank(),
+              axis.text.x = element_blank(),
+              axis.text.y = element_blank(),
               axis.ticks = element_blank(),
               axis.title.x = element_blank(),
               axis.title.y = element_blank(),legend.position="none", plot.title = element_text(hjust = 0.5))+ggtitle("Percentage of Total Flights")})
@@ -119,6 +128,8 @@ shinyServer(function(input, output, session) {
               panel.border = element_blank(),
               axis.line = element_blank(),
               axis.ticks = element_blank(),
+              axis.text.x = element_blank(),
+              axis.text.y = element_blank(),
               axis.title.x = element_blank(),
               axis.title.y = element_blank(),legend.position="none", plot.title = element_text(hjust = 0.5))+ggtitle("Percentage of Flights Delayed")})
     
@@ -144,6 +155,8 @@ shinyServer(function(input, output, session) {
               panel.border = element_blank(),
               axis.line = element_blank(),
               axis.ticks = element_blank(),
+              axis.text.x = element_blank(),
+              axis.text.y = element_blank(),
               axis.title.x = element_blank(),
               axis.title.y = element_blank(),legend.position="none", plot.title = element_text(hjust = 0.5))+ggtitle("Percentage of Delays per Type")})
     
@@ -208,6 +221,7 @@ shinyServer(function(input, output, session) {
     
     output$table <- renderTable({FlightReport()})
     
+    
     #Prepare data for Flight Data Plots
     #The following script prepares the data to present dentsity plots about taxi, airtime, taxi out and total flight duration. 
     AirFlightDataCompPlot <- reactive({
@@ -215,7 +229,28 @@ shinyServer(function(input, output, session) {
       AirFlightDataComp <- subset(DelayedFlights, Origin ==input$DepartureDestination & Dest==input$Destination, select = c(UniqueCarrier, AirTime, TaxiIn, TaxiOut, Total_Delay, Duration))
       AirFlightDataComp$Total_Delay <- AirFlightDataComp$Total_Delay*60
       AirFlightDataComp
+      })
+    
+    AirlineCompare <- reactive({
+      DelayedFlights["Duration"] <- (DelayedFlights$TaxiIn+DelayedFlights$TaxiOut+DelayedFlights$AirTime)
+      AirFlightDataComp <- subset(DelayedFlights, Origin ==input$DepartureDestination & Dest==input$Destination, select = c(UniqueCarrier, AirTime, TaxiIn, TaxiOut, Total_Delay, Duration))
+      AirFlightDataComp$Total_Delay <- AirFlightDataComp$Total_Delay*60
+      AovTest<-aov(AirFlightDataComp$Duration ~ AirFlightDataComp$UniqueCarrier, data = AirFlightDataComp)
+      TuckeyTest <- TukeyHSD(x=AovTest, 'AirFlightDataComp$UniqueCarrier', conf.level=0.95)
+      TuckeyTest <- as.data.frame(TuckeyTest$`AirFlightDataComp$UniqueCarrier`)
+      ResultTable <- data.frame(rownames(TuckeyTest))
+      colnames(ResultTable) <- "Flight Duration"
+      ResultTable$PValue <- TuckeyTest$`p adj`
+      ResultTable$Direction <- TuckeyTest$diff
+      ResultTable$`Statistical Difference` <- ifelse(ResultTable$PValue <0.05, "Different", "Not Different")
+      ResultTable$Duration <- ifelse(ResultTable$Direction <0, "Shorter", ifelse(ResultTable$`Statistical Difference` == "Not Different", "The Same", "Longer"))
+      ResultTable$Duration <- ifelse(ResultTable$`Statistical Difference` == "Not Different", "The Same", ResultTable$Duration)
+      ResultTable$PValue <- NULL
+      ResultTable$Direction <- NULL
+      ResultTable
     })
+    
+    output$tabledif <- renderTable({AirlineCompare()})
     
     output$DurationPlot <- renderPlot({ggplot(data=AirFlightDataCompPlot(), aes(x= Duration)) + geom_density(aes(fill=UniqueCarrier),alpha = 0.2) + 
         theme(panel.background = element_rect(fill="white")) + scale_fill_brewer(name = "Airlines", palette="Blues") + xlab("Duration (min)")})
@@ -281,4 +316,7 @@ shinyServer(function(input, output, session) {
   #End of shiny script. 
   
 })
+
+endTime <- Sys.time()
+print(endTime-startTime)
 
